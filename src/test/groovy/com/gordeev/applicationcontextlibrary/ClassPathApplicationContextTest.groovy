@@ -1,18 +1,24 @@
 package com.gordeev.applicationcontextlibrary
 
-class ClassPathApplicationContextTest extends GroovyTestCase {
+import com.gordeev.applicationcontextlibrary.fortest.MailService
+import spock.lang.Specification
+
+class ClassPathApplicationContextTest extends Specification {
+    String[] paths = ["context.xml"]
+    ApplicationContext applicationContext = new ClassPathApplicationContext(paths)
+
     void testGetBean() {
-    }
-
-    void testGetBean1() {
-    }
-
-    void testGetBean2() {
+        expect: "expect"
+        applicationContext.getBean("userService").getClass().getSimpleName() == "UserService"
+        applicationContext.getBean(MailService.class).getClass().getSimpleName() == "MailService"
     }
 
     void testGetBeanNames() {
+        given:
+        def classNameList = applicationContext.getBeanNames()
+
+        expect:"lists equals"
+        classNameList == ['userService', 'paymentWithMaxService', 'paymentService', 'mailService']
     }
 
-    void testSetBeanDefinitionReader() {
-    }
 }

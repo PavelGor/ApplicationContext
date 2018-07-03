@@ -15,7 +15,7 @@ import java.util.Map;
 public class ClassPathApplicationContext implements ApplicationContext { //TODO: <T>
     private String[] paths;
     private BeanDefinitionReader reader;
-    private List<Bean> beans;
+    private List<Bean> beans = new ArrayList<>();
     private List<BeanDefinition> beanDefinitions;
     private final static ClassPathApplicationContext instance = new ClassPathApplicationContext();
 
