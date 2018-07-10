@@ -1,11 +1,10 @@
 package com.gordeev.applicationcontextlibrary.beandefinitionreader
 
 import com.gordeev.applicationcontextlibrary.beandefinitionreader.xml.XmlBeanDefinitionReader
-import com.gordeev.applicationcontextlibrary.entity.BeanDefinition
-import org.junit.Test
 import spock.lang.Specification
 
-class XmlBeanDefinitionReaderTest extends Specification {
+class XmlBeanDefinitionReaderITest extends Specification {
+
     void testReadBeanDefinitions() {
         String[] paths = ["context.xml"]
         XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(paths)
@@ -16,6 +15,8 @@ class XmlBeanDefinitionReaderTest extends Specification {
         expect: "expect"
         actualBeanDefinitions.get(0).id == "userService"
         actualBeanDefinitions.get(0).beanClassName == "com.gordeev.applicationcontextlibrary.fortest.UserService"
+        actualBeanDefinitions.get(0).refDependencies == ['mailService':'mailService']
+        actualBeanDefinitions.get(0).dependencies == [:]
 
         actualBeanDefinitions.get(1).id == "paymentWithMaxService"
         actualBeanDefinitions.get(2).id == "paymentService"
@@ -23,4 +24,15 @@ class XmlBeanDefinitionReaderTest extends Specification {
 
     }
 
+    void testDeleteDoublesWithPaths(){
+        given: "given"
+        String[] paths = ["1.xml","2.xml","3.xml","4.xml","5.xml"]
+        String[] importPaths = ["1.xml","6.xml","3.xml","7.xml","8.xml"]
+        XmlBeanDefinitionReader xmlBeanDefinitionReader = new XmlBeanDefinitionReader(paths)
+        String[]  expectedPaths = xmlBeanDefinitionReader.deleteDoublesWithPaths(importPaths)
+
+        expect:"arrays equals"
+        expectedPaths == ["6.xml","7.xml","8.xml"]
+        expectedPaths != ["1.xml","6.xml","3.xml","7.xml","8.xml"]
+    }
 }

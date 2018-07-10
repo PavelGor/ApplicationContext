@@ -12,37 +12,39 @@ public class MyHandler extends DefaultHandler {
 
     private List<BeanDefinition> beanDefinitions;
     private BeanDefinition beanDefinition;
-    private HashMap<String, String> map;
+    private HashMap<String, String> mapVar;
+    private HashMap<String, String> mapRef;
     private List<String> importPaths;
 
     @Override
-    public void startElement(String uri, String localName, String qName, Attributes attributes) {
+    public void startElement(String uri, String localName, String tagName, Attributes attributes) {
 
-        if (qName.equalsIgnoreCase("bean")) {
-            String idAtr = attributes.getValue("id");
-            String classAtr = attributes.getValue("class");
+        if (tagName.equalsIgnoreCase("bean")) {
+            String attributeId = attributes.getValue("id");
+            String attributeClass = attributes.getValue("class");
 
             beanDefinition = new BeanDefinition();
-            beanDefinition.setId(idAtr);
-            beanDefinition.setBeanClassName(classAtr);
-            map = new HashMap();
+            beanDefinition.setId(attributeId);
+            beanDefinition.setBeanClassName(attributeClass);
 
             if (beanDefinitions == null) {
                 beanDefinitions = new ArrayList<>();
             }
+            mapVar = new HashMap();
+            mapRef = new HashMap();
 
-        } else if (qName.equalsIgnoreCase("property")) {
-            String nameAtr = attributes.getValue("name");
-            String valueAtr = attributes.getValue("value");
-            String refAtr = attributes.getValue("ref");
+        } else if (tagName.equalsIgnoreCase("property")) {
+            String attributeName = attributes.getValue("name");
+            String attributeValue = attributes.getValue("value");
+            String attributeRef = attributes.getValue("ref");
 
-            if (valueAtr != null) {
-                map.put(nameAtr, valueAtr);
-            } else if (refAtr != null) {
-                map.put(nameAtr, refAtr);
+            if (attributeValue != null) {
+                mapVar.put(attributeName, attributeValue);
+            } else if (attributeRef != null) {
+                mapRef.put(attributeName, attributeRef);
             }
 
-        } else if (qName.equalsIgnoreCase("import")) {
+        } else if (tagName.equalsIgnoreCase("import")) {
             if (importPaths == null) {
                 importPaths = new ArrayList<>();
             }
@@ -51,10 +53,10 @@ public class MyHandler extends DefaultHandler {
     }
 
     @Override
-    public void endElement(String uri, String localName, String qName) {
-        if (qName.equalsIgnoreCase("bean")) {
-            beanDefinition.setDependencies(map);
-            beanDefinition.setRefDependencies(map);
+    public void endElement(String uri, String localName, String tagName) {
+        if (tagName.equalsIgnoreCase("bean")) {
+            beanDefinition.setDependencies(mapVar);
+            beanDefinition.setRefDependencies(mapRef);
             beanDefinitions.add(beanDefinition);
         }
     }

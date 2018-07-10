@@ -4,10 +4,10 @@ import com.gordeev.applicationcontextlibrary.beandefinitionreader.BeanDefinition
 
 import java.util.List;
 
-public interface ApplicationContext <T> {
+public interface ApplicationContext {
     Object getBean(String name);
-    T getBean(Class<T> tClass);
-    T getBean(String name, Class<T> tClass);
+    Object getBean(Class tClass);
+    Object getBean(String name, Class tClass);
     List<String> getBeanNames();
     void setBeanDefinitionReader(BeanDefinitionReader beanDefinitionReader);
 }

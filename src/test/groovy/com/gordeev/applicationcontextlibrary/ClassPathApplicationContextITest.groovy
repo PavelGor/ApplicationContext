@@ -1,23 +1,34 @@
 package com.gordeev.applicationcontextlibrary
 
 import com.gordeev.applicationcontextlibrary.fortest.MailService
+import com.gordeev.applicationcontextlibrary.fortest.PaymentWithMaxService
+import com.gordeev.applicationcontextlibrary.fortest.UserService
 import spock.lang.Specification
 
-class ClassPathApplicationContextTest extends Specification {
+class ClassPathApplicationContextITest extends Specification {
     String[] paths = ["context.xml"]
     ApplicationContext applicationContext = new ClassPathApplicationContext(paths)
 
+
     void testGetBean() {
+        given:
+        PaymentWithMaxService paymentWithMaxService = applicationContext.getBean(PaymentWithMaxService.class)
+
         expect: "expect"
         applicationContext.getBean("userService").getClass().getSimpleName() == "UserService"
         applicationContext.getBean(MailService.class).getClass().getSimpleName() == "MailService"
+        applicationContext.getBean("userService", UserService.class).getClass().getSimpleName() == "UserService"
+
+        paymentWithMaxService.maxAmount == 5000
+        paymentWithMaxService.mailService == (applicationContext.getBean(MailService.class))
+
     }
 
     void testGetBeanNames() {
         given:
         def classNameList = applicationContext.getBeanNames()
 
-        expect:"lists equals"
+        expect:"equals"
         classNameList == ['userService', 'paymentWithMaxService', 'paymentService', 'mailService']
     }
 
