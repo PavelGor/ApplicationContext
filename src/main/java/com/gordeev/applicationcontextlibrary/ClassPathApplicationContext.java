@@ -1,9 +1,9 @@
 package com.gordeev.applicationcontextlibrary;
 
-import com.gordeev.applicationcontextlibrary.beandefinitionreader.BeanDefinitionReader;
-import com.gordeev.applicationcontextlibrary.beandefinitionreader.xml.XmlBeanDefinitionReader;
 import com.gordeev.applicationcontextlibrary.entity.Bean;
 import com.gordeev.applicationcontextlibrary.entity.BeanDefinition;
+import com.gordeev.applicationcontextlibrary.reader.BeanDefinitionReader;
+import com.gordeev.applicationcontextlibrary.reader.xml.XmlBeanDefinitionReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,21 +13,14 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class ClassPathApplicationContext implements ApplicationContext {
     private static final Logger LOG = LoggerFactory.getLogger(ClassPathApplicationContext.class);
-    private static final ClassPathApplicationContext instance = new ClassPathApplicationContext();
     private String[] paths;
     private BeanDefinitionReader reader;
     private List<BeanDefinition> beanDefinitions;
     private List<Bean> beans = new ArrayList<>();
-
-    public ClassPathApplicationContext() {
-    }
-
-    public static ClassPathApplicationContext getInstance() {
-        return instance;
-    }
 
     public ClassPathApplicationContext(String[] paths) {
         this.paths = paths;
@@ -40,46 +33,50 @@ public class ClassPathApplicationContext implements ApplicationContext {
     }
 
     @Override
-    public Object getBean(String name) {
+    public Optional<Object> getBean(String name) {
         for (Bean bean : beans) {
             if (bean.getId().equalsIgnoreCase(name)) {
                 LOG.info("User get bean with name: {}", name);
-                return bean.getValue();
+                return Optional.of(bean.getValue());
             }
         }
-        return null;//TODO: think about other way (not null) - change after guava Labs
+        return java.util.Optional.empty();
     }
 
     @Override
-    public Object getBean(Class aClass) {
+    public <T> Optional<T> getBean(Class<T> clazz) {
         for (Bean bean : beans) {
-            if (bean.getValue().getClass() == aClass) {
-                LOG.info("User get bean with name: {}", aClass.getName());
-                return bean.getValue();
+            if (bean.getValue().getClass() == clazz) {
+                LOG.info("User get bean with name: {}", clazz.getName());
+                return Optional.of(clazz.cast(bean.getValue()));
             }
         }
-        return null;
+        return Optional.empty();
     }
 
     @Override
-    public Object getBean(String name, Class aClass) {// in what case it is possible?
+    public <T> Optional<T> getBean(String name, Class<T> clazz) {
         for (Bean bean : beans) {
-            if (bean.getValue().getClass() == aClass && bean.getId().equalsIgnoreCase(name)) {
+            if (bean.getId().equalsIgnoreCase(name)) {
                 LOG.info("User get bean with name: {}", name);
-                return bean.getValue();
+                return Optional.of(clazz.cast(bean.getValue()));
             }
         }
-        return null;
+        return Optional.empty();
     }
 
     @Override
-    public List<String> getBeanNames() {
+    public Optional<List<String>> getBeanNames() {
         List<String> names = new ArrayList<>();
-        for (Bean bean : beans) {
-            names.add(bean.getId());
+        if (beans != null) {
+            for (Bean bean : beans) {
+                names.add(bean.getId());
+            }
+            LOG.info("User get List of beans: {}", names);
+            return Optional.of(names);
+        } else {
+            return Optional.empty();
         }
-        LOG.info("User get List of beans: {}", names);
-        return names;
     }
 
     @Override
@@ -90,19 +87,18 @@ public class ClassPathApplicationContext implements ApplicationContext {
 
     private void createContext() {
         beanDefinitions = reader.readBeanDefinitions();
-            LOG.info("Definitions were got: {} thing(s)", beanDefinitions.size());
+        LOG.info("Definitions were got: {} thing(s)", beanDefinitions.size());
         createBeansFromBeanDefinitions();
-            LOG.info("Beans were set: {}  thing(s)", beans.size());
+        LOG.info("Beans were set: {}  thing(s)", beans.size());
         injectDependencies();
-            LOG.info("Dependencies and Variables were set for objects");
+        LOG.info("Dependencies and Variables were set for objects");
     }
 
     private void createBeansFromBeanDefinitions() {
         for (BeanDefinition beanDefinition : beanDefinitions) {
             Bean bean = new Bean();
-            String className = "";
+            String className = beanDefinition.getBeanClassName();
             try {
-                className = beanDefinition.getBeanClassName();
                 Object newObject = Class.forName(className).newInstance();
                 bean.setValue(newObject);
                 bean.setId(beanDefinition.getId());
@@ -115,39 +111,54 @@ public class ClassPathApplicationContext implements ApplicationContext {
     }
 
     private void injectDependencies() {
-        for (Bean bean : beans) {
-            for (BeanDefinition beanDefinition : beanDefinitions) {
-                if (bean.getId().equals(beanDefinition.getId())) {
-                    setObjectVariablesValue(bean.getValue(), beanDefinition.getDependencies(), false);//Is there other algorithm to organize code without boolean?
-                    setObjectVariablesValue(bean.getValue(), beanDefinition.getRefDependencies(), true);
+        for (BeanDefinition beanDefinition : beanDefinitions) {
+            Optional<Object> optionalBeanValue = getBean(beanDefinition.getId());
+            Map<String, String> dependencies = beanDefinition.getDependencies();
+            Map<String, String> refDependencies = beanDefinition.getRefDependencies();
+
+            if (optionalBeanValue.isPresent()) {
+                Object beanValue = optionalBeanValue.get();
+                if (refDependencies != null) {
+                    injectObjectVariablesValues(beanValue, refDependencies, true);
+                }
+                if (dependencies != null) {
+                    injectObjectVariablesValues(beanValue, dependencies, false);
                 }
             }
         }
     }
 
-    private void setObjectVariablesValue(Object object, Map<String, String> dependencies, boolean isReference) {
+    private void injectObjectVariablesValues(Object object, Map<String, String> dependencies, boolean isReference) {
         String objectName = object.getClass().getName();
         Method[] methods = object.getClass().getDeclaredMethods();
+
         for (Map.Entry<String, String> dependency : dependencies.entrySet()) {
-            boolean isVariableSet = false;
+            boolean isDependencySet = false;
+            String dependencyName = dependency.getKey();
             for (Method method : methods) {
-                String fieldName = method.getName().substring(3);
-                String dependencyName = dependency.getKey();
-                if (dependencyName.equalsIgnoreCase(fieldName) && method.getName().contains("set")) {
-                    try {
-                        if (isReference){
-                            method.invoke(object, getBean(dependency.getValue()));
-                        } else {
-                            injectVariableValue(object, method, dependency.getValue());
+
+                if (method.getName().startsWith("set")) {
+                    String fieldName = method.getName().substring(3);
+                    if (fieldName.equalsIgnoreCase(dependencyName)) {
+                        try {
+                            if (!isReference) {
+
+                                injectVariableValue(object, method, dependency.getValue());
+
+                            } else if (getBean(dependency.getValue()).isPresent()){
+
+                                method.invoke(object, getBean(dependency.getValue()).get());
+
+                            }
+                            isDependencySet = true;
+                        } catch (IllegalAccessException | InvocationTargetException e) {
+                            LOG.error("Object {} have no setter for field: {}", objectName, dependencyName);
+                            throw new RuntimeException("Class " + objectName + " have no setter for field: " + dependencyName + "\n" + e);
                         }
-                        isVariableSet = true;
-                    } catch (IllegalAccessException | InvocationTargetException e) {
-                        LOG.error("Object {} have no setter for field: {}", objectName, dependencyName);
-                        throw new RuntimeException("Class " + objectName + " have no setter for field: " + dependencyName + "\n" + e);
                     }
                 }
             }
-            if (!isVariableSet) {
+            if (!isDependencySet) {
                 LOG.error("Object {} have no setter for field: {}", objectName, dependency.getKey());
                 throw new RuntimeException("Class " + objectName + " have no setter for field: " + dependency.getKey());
             }
@@ -155,22 +166,21 @@ public class ClassPathApplicationContext implements ApplicationContext {
     }
 
     private void injectVariableValue(Object object, Method method, String value) throws InvocationTargetException, IllegalAccessException {
-        method.getParameters();
         Type[] types = method.getParameterTypes();
         Type type = types[0];
-        if (type == int.class){
+        if (type == int.class) {
             method.invoke(object, Integer.parseInt(value));
-        } else if (type == String.class){
+        } else if (type == String.class) {
             method.invoke(object, value);
-        } else if (type == double.class){
+        } else if (type == double.class) {
             method.invoke(object, Double.parseDouble(value));
-        } else if (type == float.class){
+        } else if (type == float.class) {
             method.invoke(object, Float.parseFloat(value));
-        } else if (type == boolean.class){
+        } else if (type == boolean.class) {
             method.invoke(object, Boolean.parseBoolean(value));
-        } else if (type == short.class){
+        } else if (type == short.class) {
             method.invoke(object, Short.parseShort(value));
-        } else if (type == long.class){
+        } else if (type == long.class) {
             method.invoke(object, Long.parseLong(value));
         }
     }

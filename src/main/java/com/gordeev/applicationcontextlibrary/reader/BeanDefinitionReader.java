@@ -1,4 +1,4 @@
-package com.gordeev.applicationcontextlibrary.beandefinitionreader;
+package com.gordeev.applicationcontextlibrary.reader;
 
 import com.gordeev.applicationcontextlibrary.entity.BeanDefinition;
 

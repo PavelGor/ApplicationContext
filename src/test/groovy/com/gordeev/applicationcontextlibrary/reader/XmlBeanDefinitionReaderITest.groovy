@@ -1,6 +1,6 @@
-package com.gordeev.applicationcontextlibrary.beandefinitionreader
+package com.gordeev.applicationcontextlibrary.reader
 
-import com.gordeev.applicationcontextlibrary.beandefinitionreader.xml.XmlBeanDefinitionReader
+import com.gordeev.applicationcontextlibrary.reader.xml.XmlBeanDefinitionReader
 import spock.lang.Specification
 
 class XmlBeanDefinitionReaderITest extends Specification {

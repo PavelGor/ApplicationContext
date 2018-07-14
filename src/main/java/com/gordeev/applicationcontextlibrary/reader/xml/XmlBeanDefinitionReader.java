@@ -1,6 +1,6 @@
-package com.gordeev.applicationcontextlibrary.beandefinitionreader.xml;
+package com.gordeev.applicationcontextlibrary.reader.xml;
 
-import com.gordeev.applicationcontextlibrary.beandefinitionreader.BeanDefinitionReader;
+import com.gordeev.applicationcontextlibrary.reader.BeanDefinitionReader;
 import com.gordeev.applicationcontextlibrary.entity.BeanDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +39,6 @@ public class XmlBeanDefinitionReader implements BeanDefinitionReader {
                 InputStream inputStream = new FileInputStream(new File(path));
                 saxParser.parse(inputStream, handler);
 
-
                 beanDefinitions.addAll(handler.getBeanDefinitions());
 
                 String[] importPaths = handler.getImportPaths();
@@ -49,9 +48,11 @@ public class XmlBeanDefinitionReader implements BeanDefinitionReader {
                 }
 
             } catch (IOException e) {
-                LOG.error("Cannot open file: {}", path, e);
+                LOG.error("Cannot open file: {}, {}", path, e);
+                throw new RuntimeException("Cannot open file: "+ path + ", " + e);
             } catch (ParserConfigurationException | SAXException e) {
-                LOG.error("Error in {}", SAXParser.class, e);
+                LOG.error("Error in {}, {}", SAXParser.class, e);
+                throw new RuntimeException("Error in : "+ SAXParser.class + ", " + e);
             }
         }
         return beanDefinitions;

@@ -9,27 +9,52 @@ class ClassPathApplicationContextITest extends Specification {
     String[] paths = ["context.xml"]
     ApplicationContext applicationContext = new ClassPathApplicationContext(paths)
 
-
     void testGetBean() {
         given:
-        PaymentWithMaxService paymentWithMaxService = applicationContext.getBean(PaymentWithMaxService.class)
+        Optional<PaymentWithMaxService> optionalPaymentWithMaxService = applicationContext.getBean(PaymentWithMaxService.class)
+        PaymentWithMaxService paymentWithMaxService
+        if (optionalPaymentWithMaxService.isPresent()){
+            paymentWithMaxService = optionalPaymentWithMaxService.get()
+        }
+
+        Class<UserService> clazz = UserService.class
+        Optional<UserService> optionalUserService = applicationContext.getBean(clazz)
+        UserService userService
+        if (optionalUserService.isPresent()){
+            userService = optionalUserService.get()
+        }
 
         expect: "expect"
-        applicationContext.getBean("userService").getClass().getSimpleName() == "UserService"
-        applicationContext.getBean(MailService.class).getClass().getSimpleName() == "MailService"
-        applicationContext.getBean("userService", UserService.class).getClass().getSimpleName() == "UserService"
+        userService.getMailService().class == MailService.class
+        applicationContext.getBean("userService").get().getClass().getSimpleName() == "UserService"
+        applicationContext.getBean(MailService.class).get().getClass().getSimpleName() == "MailService"
+        applicationContext.getBean("userService", UserService.class).get().getClass().getSimpleName() == "UserService"
 
         paymentWithMaxService.maxAmount == 5000
-        paymentWithMaxService.mailService == (applicationContext.getBean(MailService.class))
+        paymentWithMaxService.mailService == (applicationContext.getBean(MailService.class).get())
 
     }
 
     void testGetBeanNames() {
         given:
-        def classNameList = applicationContext.getBeanNames()
+        def classNameList = applicationContext.getBeanNames().get()
 
         expect:"equals"
         classNameList == ['userService', 'paymentWithMaxService', 'paymentService', 'mailService']
     }
+
+//    void testExceptionExpected(){
+//            setup:
+//            String[] paths = ["context_error.xml"]
+//            ApplicationContext applicationContext = new ClassPathApplicationContext(paths)
+//
+//            when:
+//            applicationContext.getBean("userService")
+//
+//            then:
+//            final RuntimeException exception = thrown()
+//            exception.message == 'Application have no such class: com.gordeev.applicationcontextlibrary.fortest.User'
+//    }
+
 
 }
