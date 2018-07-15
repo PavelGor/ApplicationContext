@@ -8,7 +8,7 @@ import com.gordeev.applicationcontextlibrary.entity.BeanDefinition;
 import org.xml.sax.Attributes;
 import org.xml.sax.helpers.DefaultHandler;
 
-public class MyHandler extends DefaultHandler {
+public class XmlParserHandler extends DefaultHandler {
 
     private List<BeanDefinition> beanDefinitions;
 

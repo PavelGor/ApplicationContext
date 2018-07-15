@@ -1,5 +1,5 @@
 <beans>
-    <import resource = "email-context.xml"/>
+    <import resource = "src/test/groovy/com/gordeev/applicationcontextlibrary/fortest/email-context.xml"/>
 
     <bean id="userService" class="com.gordeev.applicationcontextlibrary.fortest.UserService">
         <property name="mailService" ref="mailService"/>

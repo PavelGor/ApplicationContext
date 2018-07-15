@@ -2,18 +2,15 @@ package com.gordeev.applicationcontextlibrary;
 
 import com.gordeev.applicationcontextlibrary.entity.Bean;
 import com.gordeev.applicationcontextlibrary.entity.BeanDefinition;
+import com.gordeev.applicationcontextlibrary.injector.Injector;
+import com.gordeev.applicationcontextlibrary.injector.ReferenceInjector;
+import com.gordeev.applicationcontextlibrary.injector.ValueInjector;
 import com.gordeev.applicationcontextlibrary.reader.BeanDefinitionReader;
 import com.gordeev.applicationcontextlibrary.reader.xml.XmlBeanDefinitionReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class ClassPathApplicationContext implements ApplicationContext {
     private static final Logger LOG = LoggerFactory.getLogger(ClassPathApplicationContext.class);
@@ -21,14 +18,15 @@ public class ClassPathApplicationContext implements ApplicationContext {
     private BeanDefinitionReader reader;
     private List<BeanDefinition> beanDefinitions;
     private List<Bean> beans = new ArrayList<>();
+    private Map<BeanDefinition, Bean> beanDefinitionBeanMap = new HashMap<>();
 
-    public ClassPathApplicationContext(String[] paths) {
+    public ClassPathApplicationContext(String... paths) {
         this.paths = paths;
         setBeanDefinitionReader(new XmlBeanDefinitionReader(paths));
     }
 
     public ClassPathApplicationContext(String path) {
-        paths[0] = path;
+        paths = new String[]{path};
         setBeanDefinitionReader(new XmlBeanDefinitionReader(paths));
     }
 
@@ -107,81 +105,25 @@ public class ClassPathApplicationContext implements ApplicationContext {
                 throw new RuntimeException("Application have no such class: " + className + "\n" + e);
             }
             beans.add(bean);
+            beanDefinitionBeanMap.put(beanDefinition, bean);
         }
     }
 
     private void injectDependencies() {
         for (BeanDefinition beanDefinition : beanDefinitions) {
-            Optional<Object> optionalBeanValue = getBean(beanDefinition.getId());
+            Object beanObject = beanDefinitionBeanMap.get(beanDefinition).getValue();
             Map<String, String> dependencies = beanDefinition.getDependencies();
             Map<String, String> refDependencies = beanDefinition.getRefDependencies();
 
-            if (optionalBeanValue.isPresent()) {
-                Object beanValue = optionalBeanValue.get();
-                if (refDependencies != null) {
-                    injectObjectVariablesValues(beanValue, refDependencies, true);
-                }
-                if (dependencies != null) {
-                    injectObjectVariablesValues(beanValue, dependencies, false);
-                }
+            if (refDependencies != null) {
+                Injector injector = new ReferenceInjector(beans);
+                injector.injectDependencies(beanObject, refDependencies);
+            }
+            if (dependencies != null) {
+                Injector injector = new ValueInjector();
+                injector.injectDependencies(beanObject, dependencies);
             }
         }
     }
 
-    private void injectObjectVariablesValues(Object object, Map<String, String> dependencies, boolean isReference) {
-        String objectName = object.getClass().getName();
-        Method[] methods = object.getClass().getDeclaredMethods();
-
-        for (Map.Entry<String, String> dependency : dependencies.entrySet()) {
-            boolean isDependencySet = false;
-            String dependencyName = dependency.getKey();
-            for (Method method : methods) {
-
-                if (method.getName().startsWith("set")) {
-                    String fieldName = method.getName().substring(3);
-                    if (fieldName.equalsIgnoreCase(dependencyName)) {
-                        try {
-                            if (!isReference) {
-
-                                injectVariableValue(object, method, dependency.getValue());
-
-                            } else if (getBean(dependency.getValue()).isPresent()){
-
-                                method.invoke(object, getBean(dependency.getValue()).get());
-
-                            }
-                            isDependencySet = true;
-                        } catch (IllegalAccessException | InvocationTargetException e) {
-                            LOG.error("Object {} have no setter for field: {}", objectName, dependencyName);
-                            throw new RuntimeException("Class " + objectName + " have no setter for field: " + dependencyName + "\n" + e);
-                        }
-                    }
-                }
-            }
-            if (!isDependencySet) {
-                LOG.error("Object {} have no setter for field: {}", objectName, dependency.getKey());
-                throw new RuntimeException("Class " + objectName + " have no setter for field: " + dependency.getKey());
-            }
-        }
-    }
-
-    private void injectVariableValue(Object object, Method method, String value) throws InvocationTargetException, IllegalAccessException {
-        Type[] types = method.getParameterTypes();
-        Type type = types[0];
-        if (type == int.class) {
-            method.invoke(object, Integer.parseInt(value));
-        } else if (type == String.class) {
-            method.invoke(object, value);
-        } else if (type == double.class) {
-            method.invoke(object, Double.parseDouble(value));
-        } else if (type == float.class) {
-            method.invoke(object, Float.parseFloat(value));
-        } else if (type == boolean.class) {
-            method.invoke(object, Boolean.parseBoolean(value));
-        } else if (type == short.class) {
-            method.invoke(object, Short.parseShort(value));
-        } else if (type == long.class) {
-            method.invoke(object, Long.parseLong(value));
-        }
-    }
 }

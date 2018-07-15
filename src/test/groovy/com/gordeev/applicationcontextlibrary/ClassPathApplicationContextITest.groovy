@@ -6,7 +6,7 @@ import com.gordeev.applicationcontextlibrary.fortest.UserService
 import spock.lang.Specification
 
 class ClassPathApplicationContextITest extends Specification {
-    String[] paths = ["context.xml"]
+    String[] paths = ["src/test/groovy/com/gordeev/applicationcontextlibrary/fortest/context.xml"]
     ApplicationContext applicationContext = new ClassPathApplicationContext(paths)
 
     void testGetBean() {

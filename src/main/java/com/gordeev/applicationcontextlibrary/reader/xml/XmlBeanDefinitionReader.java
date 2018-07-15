@@ -35,13 +35,13 @@ public class XmlBeanDefinitionReader implements BeanDefinitionReader {
         for (String path : paths) {
             try {
                 SAXParser saxParser = saxParserFactory.newSAXParser();
-                MyHandler handler = new MyHandler();
+                XmlParserHandler xmlParserHandler = new XmlParserHandler();
                 InputStream inputStream = new FileInputStream(new File(path));
-                saxParser.parse(inputStream, handler);
+                saxParser.parse(inputStream, xmlParserHandler);
 
-                beanDefinitions.addAll(handler.getBeanDefinitions());
+                beanDefinitions.addAll(xmlParserHandler.getBeanDefinitions());
 
-                String[] importPaths = handler.getImportPaths();
+                String[] importPaths = xmlParserHandler.getImportPaths();
                 if (importPaths != null) {
                     importPaths = deleteDoublesWithPaths(importPaths);
                     readBeanDefinitions(importPaths);

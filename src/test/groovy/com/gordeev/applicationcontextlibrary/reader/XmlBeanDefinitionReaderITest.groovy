@@ -6,7 +6,7 @@ import spock.lang.Specification
 class XmlBeanDefinitionReaderITest extends Specification {
 
     void testReadBeanDefinitions() {
-        String[] paths = ["context.xml"]
+        String[] paths = ["src/test/groovy/com/gordeev/applicationcontextlibrary/fortest/context.xml"]
         XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(paths)
 
         given: "given"
