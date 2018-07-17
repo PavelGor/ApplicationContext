@@ -1,10 +1,24 @@
 package com.gordeev.applicationcontextlibrary.injector;
 
+import com.gordeev.applicationcontextlibrary.entity.Bean;
+import com.gordeev.applicationcontextlibrary.entity.BeanDefinition;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.util.List;
+import java.util.Map;
 
 public class ValueInjector extends Injector {
+
+    public ValueInjector(List<BeanDefinition> beanDefinitions, Map<BeanDefinition, Bean> beanDefinitionBeanMap) {
+        super(beanDefinitions, beanDefinitionBeanMap);
+    }
+
+    @Override
+    protected Map<String, String> getDependencies(BeanDefinition beanDefinition) {
+        return beanDefinition.getDependencies();
+    }
 
     @Override
     public void injectValue(Object object, Method method, String value) throws InvocationTargetException, IllegalAccessException {

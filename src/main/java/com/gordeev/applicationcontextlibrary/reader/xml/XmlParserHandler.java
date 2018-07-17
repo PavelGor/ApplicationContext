@@ -12,7 +12,7 @@ public class XmlParserHandler extends DefaultHandler {
 
     private List<BeanDefinition> beanDefinitions;
 
-    private List<String> importPaths;
+    private List<String> importPaths = new ArrayList<>();
 
     @Override
     public void startElement(String uri, String localName, String tagName, Attributes attributes) {
@@ -44,9 +44,6 @@ public class XmlParserHandler extends DefaultHandler {
             }
 
         } else if (tagName.equalsIgnoreCase("import")) {
-            if (importPaths == null) {
-                importPaths = new ArrayList<>();
-            }
             importPaths.add(attributes.getValue("resource"));
         }
     }
@@ -55,7 +52,7 @@ public class XmlParserHandler extends DefaultHandler {
         return beanDefinitions;
     }
 
-    public String[] getImportPaths() {
-        return importPaths != null ? importPaths.toArray(new String[importPaths.size()]) : null;
+    public List<String> getImportPaths() {
+        return importPaths;
     }
 }

@@ -4,12 +4,12 @@
         <property name="mail" ref="mail"/>
     </bean>
 
-    <bean id="paymentWithMaxService" class="com.gordeev.applicationcontextlibrary.fortest.PaymentWithMaxService">
+    <bean id="paymentWithMaxService" class="PaymentWithMaxService">
         <property name="maxAmount" value="5000"/>
         <property name="mailService" ref="mailService"/>
     </bean>
 
-    <bean id="paymentService" class="com.gordeev.applicationcontextlibrary.fortest.PaymentService">
+    <bean id="paymentService" class="PaymentService">
         <property name="mailService" ref="mailService"/>
     </bean>
 </beans>

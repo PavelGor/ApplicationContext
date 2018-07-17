@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ApplicationContext {
-    Optional<Object> getBean(String name);
-    <T> Optional<T> getBean(Class<T> clazz);
-    <T> Optional<T> getBean(String name, Class<T> clazz);
-    Optional<List<String>> getBeanNames();
+    Object getBean(String name);
+    <T> T getBean(Class<T> clazz);
+    <T> T getBean(String name, Class<T> clazz);
+    List<String> getBeanNames();
     void setBeanDefinitionReader(BeanDefinitionReader beanDefinitionReader);
 }

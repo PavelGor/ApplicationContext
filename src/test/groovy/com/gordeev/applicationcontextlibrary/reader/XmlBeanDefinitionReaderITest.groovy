@@ -6,7 +6,7 @@ import spock.lang.Specification
 class XmlBeanDefinitionReaderITest extends Specification {
 
     void testReadBeanDefinitions() {
-        String[] paths = ["src/test/groovy/com/gordeev/applicationcontextlibrary/fortest/context.xml"]
+        String[] paths = ["src/test/resources/xml/context.xml"]
         XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(paths)
 
         given: "given"
@@ -24,15 +24,4 @@ class XmlBeanDefinitionReaderITest extends Specification {
 
     }
 
-    void testDeleteDoublesWithPaths(){
-        given: "given"
-        String[] paths = ["1.xml","2.xml","3.xml","4.xml","5.xml"]
-        String[] importPaths = ["1.xml","6.xml","3.xml","7.xml","8.xml"]
-        XmlBeanDefinitionReader xmlBeanDefinitionReader = new XmlBeanDefinitionReader(paths)
-        String[]  expectedPaths = xmlBeanDefinitionReader.deleteDoublesWithPaths(importPaths)
-
-        expect:"arrays equals"
-        expectedPaths == ["6.xml","7.xml","8.xml"]
-        expectedPaths != ["1.xml","6.xml","3.xml","7.xml","8.xml"]
-    }
 }

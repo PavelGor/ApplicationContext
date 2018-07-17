@@ -2,6 +2,8 @@ package com.gordeev.applicationcontextlibrary;
 
 import com.gordeev.applicationcontextlibrary.entity.Bean;
 import com.gordeev.applicationcontextlibrary.entity.BeanDefinition;
+import com.gordeev.applicationcontextlibrary.exception.BeanInstantiationException;
+import com.gordeev.applicationcontextlibrary.exception.NoUniqueBeanException;
 import com.gordeev.applicationcontextlibrary.injector.Injector;
 import com.gordeev.applicationcontextlibrary.injector.ReferenceInjector;
 import com.gordeev.applicationcontextlibrary.injector.ValueInjector;
@@ -14,85 +16,94 @@ import java.util.*;
 
 public class ClassPathApplicationContext implements ApplicationContext {
     private static final Logger LOG = LoggerFactory.getLogger(ClassPathApplicationContext.class);
-    private String[] paths;
     private BeanDefinitionReader reader;
-    private List<BeanDefinition> beanDefinitions;
     private List<Bean> beans = new ArrayList<>();
-    private Map<BeanDefinition, Bean> beanDefinitionBeanMap = new HashMap<>();
 
-    public ClassPathApplicationContext(String... paths) {
-        this.paths = paths;
-        setBeanDefinitionReader(new XmlBeanDefinitionReader(paths));
+    public ClassPathApplicationContext() {
     }
 
     public ClassPathApplicationContext(String path) {
-        paths = new String[]{path};
+        this(new String[]{path});
+    }
+
+    public ClassPathApplicationContext(String... paths) {
         setBeanDefinitionReader(new XmlBeanDefinitionReader(paths));
-    }
-
-    @Override
-    public Optional<Object> getBean(String name) {
-        for (Bean bean : beans) {
-            if (bean.getId().equalsIgnoreCase(name)) {
-                LOG.info("User get bean with name: {}", name);
-                return Optional.of(bean.getValue());
-            }
-        }
-        return java.util.Optional.empty();
-    }
-
-    @Override
-    public <T> Optional<T> getBean(Class<T> clazz) {
-        for (Bean bean : beans) {
-            if (bean.getValue().getClass() == clazz) {
-                LOG.info("User get bean with name: {}", clazz.getName());
-                return Optional.of(clazz.cast(bean.getValue()));
-            }
-        }
-        return Optional.empty();
-    }
-
-    @Override
-    public <T> Optional<T> getBean(String name, Class<T> clazz) {
-        for (Bean bean : beans) {
-            if (bean.getId().equalsIgnoreCase(name)) {
-                LOG.info("User get bean with name: {}", name);
-                return Optional.of(clazz.cast(bean.getValue()));
-            }
-        }
-        return Optional.empty();
-    }
-
-    @Override
-    public Optional<List<String>> getBeanNames() {
-        List<String> names = new ArrayList<>();
-        if (beans != null) {
-            for (Bean bean : beans) {
-                names.add(bean.getId());
-            }
-            LOG.info("User get List of beans: {}", names);
-            return Optional.of(names);
-        } else {
-            return Optional.empty();
-        }
+        createContext();
     }
 
     @Override
     public void setBeanDefinitionReader(BeanDefinitionReader beanDefinitionReader) {
         reader = beanDefinitionReader;
-        createContext();
     }
 
-    private void createContext() {
-        beanDefinitions = reader.readBeanDefinitions();
-        LOG.info("Definitions were got: {} thing(s)", beanDefinitions.size());
-        createBeansFromBeanDefinitions();
+
+    @Override
+    public Object getBean(String name) {
+        for (Bean bean : beans) {
+            if (bean.getId().equalsIgnoreCase(name)) {
+                LOG.info("Found bean with name: {}", name);
+                return bean.getValue();
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public <T> T getBean(Class<T> clazz) {
+        List<Bean> foundBeanList = new ArrayList<>();
+        for (Bean bean : beans) {
+            if (bean.getValue().getClass() == clazz) {
+                foundBeanList.add(bean);
+            }
+        }
+        int size = foundBeanList.size();
+        if (size == 1) {
+            LOG.info("Found bean with name: {}", clazz.getName());
+            return clazz.cast(foundBeanList.get(0).getValue());
+        } else if (size == 0) {
+            return null;
+        } else {
+            LOG.error("There are {} objects with className: {}", size, clazz.getName());
+            throw new NoUniqueBeanException("There are " + size + " objects with className: " + clazz.getName());
+        }
+    }
+
+    @Override
+    public <T> T getBean(String name, Class<T> clazz) {
+        for (Bean bean : beans) {
+            if (bean.getId().equalsIgnoreCase(name)) {
+                LOG.info("Found bean with name: {}", name);
+                return clazz.cast(bean.getValue());
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<String> getBeanNames() {
+        List<String> names = new ArrayList<>();
+        for (Bean bean : beans) {
+            names.add(bean.getId());
+        }
+        LOG.info("Found list of beans: {}", names);
+        return names;
+    }
+
+    public void createContext() {
+        Map<BeanDefinition, Bean> beanDefinitionBeanMap = new HashMap<>();
+
+        List<BeanDefinition> beanDefinitions = reader.readBeanDefinitions();
+        LOG.info("Definitions were found: {} thing(s)", beanDefinitions.size());
+
+        createBeansFromBeanDefinitions(beanDefinitions, beanDefinitionBeanMap);
         LOG.info("Beans were set: {}  thing(s)", beans.size());
-        injectDependencies();
+
+        injectDependencies(beanDefinitions, beanDefinitionBeanMap);
         LOG.info("Dependencies and Variables were set for objects");
     }
 
-    private void createBeansFromBeanDefinitions() {
+    private void createBeansFromBeanDefinitions(List<BeanDefinition> beanDefinitions, Map<BeanDefinition, Bean> beanDefinitionBeanMap) {
+
         for (BeanDefinition beanDefinition : beanDefinitions) {
             Bean bean = new Bean();
             String className = beanDefinition.getBeanClassName();
@@ -101,29 +112,19 @@ public class ClassPathApplicationContext implements ApplicationContext {
                 bean.setValue(newObject);
                 bean.setId(beanDefinition.getId());
             } catch (InstantiationException | ClassNotFoundException | IllegalAccessException e) {
-                LOG.error("Application have no such class: {}", className);
-                throw new RuntimeException("Application have no such class: " + className + "\n" + e);
+                LOG.error("Cannot create such class: {}", className, e);
+                throw new BeanInstantiationException("Cannot create such class: " + className + "\n", e);
             }
             beans.add(bean);
             beanDefinitionBeanMap.put(beanDefinition, bean);
         }
     }
 
-    private void injectDependencies() {
-        for (BeanDefinition beanDefinition : beanDefinitions) {
-            Object beanObject = beanDefinitionBeanMap.get(beanDefinition).getValue();
-            Map<String, String> dependencies = beanDefinition.getDependencies();
-            Map<String, String> refDependencies = beanDefinition.getRefDependencies();
+    private void injectDependencies(List<BeanDefinition> beanDefinitions, Map<BeanDefinition, Bean> beanDefinitionBeanMap) {
 
-            if (refDependencies != null) {
-                Injector injector = new ReferenceInjector(beans);
-                injector.injectDependencies(beanObject, refDependencies);
-            }
-            if (dependencies != null) {
-                Injector injector = new ValueInjector();
-                injector.injectDependencies(beanObject, dependencies);
-            }
+        for (Injector injector : new Injector[]{new ReferenceInjector(beanDefinitions, beanDefinitionBeanMap), new ValueInjector(beanDefinitions, beanDefinitionBeanMap)}){
+            injector.inject();
         }
-    }
 
+    }
 }
