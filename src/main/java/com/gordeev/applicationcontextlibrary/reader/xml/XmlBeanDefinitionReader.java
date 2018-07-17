@@ -19,7 +19,6 @@ public class XmlBeanDefinitionReader implements BeanDefinitionReader {
 
     private List<String> paths = new ArrayList<>();
 
-
     public XmlBeanDefinitionReader(String[] paths) {
         this.paths.addAll(Arrays.asList(paths));
     }
@@ -41,7 +40,7 @@ public class XmlBeanDefinitionReader implements BeanDefinitionReader {
 
                 beanDefinitions.addAll(xmlParserHandler.getBeanDefinitions());
 
-                resourceFilesQueue.addAll(xmlParserHandler.getImportPaths());
+                resourceFilesQueue.addAll(xmlParserHandler.getImportPaths()); //check for doubles? in BeanFactoryPostProcess? recurse?
 
             } catch (SAXException | ParserConfigurationException | IOException e) {
                 LOG.error("Cannot parse file: {}, {}", pathToFile, e);
