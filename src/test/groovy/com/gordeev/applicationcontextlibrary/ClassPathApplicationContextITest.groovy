@@ -1,6 +1,5 @@
 package com.gordeev.applicationcontextlibrary
 
-import com.gordeev.applicationcontextlibrary.exception.BeanInstantiationException
 import com.gordeev.applicationcontextlibrary.fortest.MailService
 import com.gordeev.applicationcontextlibrary.fortest.PaymentWithMaxService
 import com.gordeev.applicationcontextlibrary.fortest.UserService
@@ -32,7 +31,7 @@ class ClassPathApplicationContextITest extends Specification {
         def classNameList = applicationContext.getBeanNames()
 
         expect:"equals"
-        classNameList == ['userService', 'paymentWithMaxService', 'paymentService', 'mailService']
+        classNameList == ['userService', 'paymentWithMaxService', 'paymentService', 'consolLogBeanPostProcessor', 'consolLogBeanFactoryPostProcessor', 'mailService']
     }
 
 }

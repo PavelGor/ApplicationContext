@@ -7,11 +7,16 @@ import com.gordeev.applicationcontextlibrary.exception.NoUniqueBeanException;
 import com.gordeev.applicationcontextlibrary.injector.Injector;
 import com.gordeev.applicationcontextlibrary.injector.ReferenceInjector;
 import com.gordeev.applicationcontextlibrary.injector.ValueInjector;
+import com.gordeev.applicationcontextlibrary.postprocessor.BeanFactoryPostProcessor;
+import com.gordeev.applicationcontextlibrary.postprocessor.BeanPostProcessor;
 import com.gordeev.applicationcontextlibrary.reader.BeanDefinitionReader;
 import com.gordeev.applicationcontextlibrary.reader.xml.XmlBeanDefinitionReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PostConstruct;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 
 public class ClassPathApplicationContext implements ApplicationContext {
@@ -95,11 +100,82 @@ public class ClassPathApplicationContext implements ApplicationContext {
         List<BeanDefinition> beanDefinitions = reader.readBeanDefinitions();
         LOG.info("Definitions were found: {} thing(s)", beanDefinitions.size());
 
+        runBeanFactoryPostProcessing(beanDefinitions);
+
         createBeansFromBeanDefinitions(beanDefinitions, beanDefinitionBeanMap);
         LOG.info("Beans were set: {}  thing(s)", beans.size());
 
         injectDependencies(beanDefinitions, beanDefinitionBeanMap);
         LOG.info("Dependencies and Variables were set for objects");
+
+        runBeanPostProcessing(beans);
+
+    }
+
+    private void runBeanFactoryPostProcessing(List<BeanDefinition> beanDefinitions) {
+        try {
+            for (Bean bean : beans) {
+                if (BeanFactoryPostProcessor.class.isAssignableFrom(bean.getValue().getClass())) {
+                    Method method = bean.getValue().getClass().getMethod("postProcessBeanFactory", List.class);
+                    method.invoke(bean.getValue(), beanDefinitions);
+                    LOG.info("found : bean for postProcessing: {}", bean.getId());
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void runBeanPostProcessing(List<Bean> beans) {
+
+        List<Bean> postProcessingBeans = scanBeansOnPostProcessing(beans);
+
+        try {
+            runPostProcessingMethod("postProcessBeforeInitialization", postProcessingBeans);
+
+            initOnAnnotations(beans);
+
+            runPostProcessingMethod("postProcessAfterInitialization", postProcessingBeans);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void initOnAnnotations(List<Bean> beans) throws Exception {
+        for (Bean bean : beans) {
+            Method[] methods = bean.getValue().getClass().getMethods();
+            for (Method method : methods) {
+                if (method.isAnnotationPresent(PostConstruct.class)) {
+                    method.invoke(bean.getValue());
+                    LOG.info("found bean {} with annotated method: {} ", bean.getId(), method.getName());
+                }
+            }
+        }
+    }
+
+    private void runPostProcessingMethod(String methodName, List<Bean> postProcessingBeans) throws Exception {
+        for (Bean postProcessingBean : postProcessingBeans) {
+            for (Bean bean : beans) {
+                Method method = postProcessingBean.getValue().getClass().getMethod(methodName, Object.class, String.class);
+                Object newBeanValue = method.invoke(postProcessingBean.getValue(), bean.getValue(), bean.getId());
+                bean.setValue(newBeanValue);
+                LOG.info("runPostProcessingMethod: {} for bean: {}", methodName, bean.getId());
+            }
+        }
+    }
+
+    private List<Bean> scanBeansOnPostProcessing(List<Bean> beans) {
+        List<Bean> postProcessingBeans = new ArrayList<>();
+        for (Bean bean : beans) {
+            if (BeanPostProcessor.class.isAssignableFrom(bean.getValue().getClass())) {
+                postProcessingBeans.add(bean);
+            }
+        }
+        LOG.info("found : {} bean(s) for postProcessing: {}", postProcessingBeans.size(), postProcessingBeans.toString());
+        return postProcessingBeans;
     }
 
     private void createBeansFromBeanDefinitions(List<BeanDefinition> beanDefinitions, Map<BeanDefinition, Bean> beanDefinitionBeanMap) {
@@ -122,7 +198,7 @@ public class ClassPathApplicationContext implements ApplicationContext {
 
     private void injectDependencies(List<BeanDefinition> beanDefinitions, Map<BeanDefinition, Bean> beanDefinitionBeanMap) {
 
-        for (Injector injector : new Injector[]{new ReferenceInjector(beanDefinitions, beanDefinitionBeanMap), new ValueInjector(beanDefinitions, beanDefinitionBeanMap)}){
+        for (Injector injector : new Injector[]{new ReferenceInjector(beanDefinitions, beanDefinitionBeanMap), new ValueInjector(beanDefinitions, beanDefinitionBeanMap)}) {
             injector.inject();
         }
 

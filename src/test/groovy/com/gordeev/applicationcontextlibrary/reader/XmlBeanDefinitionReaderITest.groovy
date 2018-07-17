@@ -20,7 +20,7 @@ class XmlBeanDefinitionReaderITest extends Specification {
 
         actualBeanDefinitions.get(1).id == "paymentWithMaxService"
         actualBeanDefinitions.get(2).id == "paymentService"
-        actualBeanDefinitions.get(3).id == "mailService"
+        actualBeanDefinitions.get(3).id == "consolLogBeanPostProcessor"
 
     }
 
