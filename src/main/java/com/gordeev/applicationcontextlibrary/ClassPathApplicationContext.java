@@ -22,6 +22,7 @@ public class ClassPathApplicationContext implements ApplicationContext {
     private static final Logger LOG = LoggerFactory.getLogger(ClassPathApplicationContext.class);
     private BeanDefinitionReader reader;
     private List<Bean> beans = new ArrayList<>();
+    private List<Bean> postProcessingBeans = new ArrayList<>();
 
     public ClassPathApplicationContext() {
     }
@@ -56,7 +57,7 @@ public class ClassPathApplicationContext implements ApplicationContext {
     public <T> T getBean(Class<T> clazz) {
         List<Bean> foundBeanList = new ArrayList<>();
         for (Bean bean : beans) {
-            if (bean.getValue().getClass() == clazz) {
+            if (clazz.isAssignableFrom(bean.getValue().getClass())) { //clazz.isAssignableFrom(bean.getValue().getClass()) //bean.getValue().getClass() == clazz
                 foundBeanList.add(bean);
             }
         }
@@ -109,41 +110,55 @@ public class ClassPathApplicationContext implements ApplicationContext {
         LOG.info("Dependencies and Variables were set for objects");
 
         //Post process for beans
-        runBeanPostProcessing(beans);
+        runBeanPostProcessing(postProcessingBeans);
 
     }
 
     private void runBeanFactoryPostProcessing(List<BeanDefinition> beanDefinitions) {
         try {
-            for (Bean bean : beans) {
-                if (BeanFactoryPostProcessor.class.isAssignableFrom(bean.getValue().getClass())) {
-                    Method method = bean.getValue().getClass().getMethod("postProcessBeanFactory", List.class);
-                    method.invoke(bean.getValue(), beanDefinitions);
-                    LOG.info("found : bean for postProcessing: {}", bean.getId());
+            for (BeanDefinition beanDefinition : beanDefinitions) {
+                Class<?> clazz = Class.forName(beanDefinition.getBeanClassName());
+                if (BeanFactoryPostProcessor.class.isAssignableFrom(clazz)) {
+                    Object objectBeanFactoryPostProcessor = clazz.newInstance();
+                    Method method = clazz.getMethod("postProcessBeanFactory", List.class);
+                    method.invoke(objectBeanFactoryPostProcessor, beanDefinitions);
+                    Bean bean = new Bean();
+                    bean.setValue(objectBeanFactoryPostProcessor);
+                    bean.setId(beanDefinition.getId());
+                    postProcessingBeans.add(bean);
                 }
             }
         } catch (Exception e) {
             LOG.error("BeanFactoryPostProcessing failed", e);
-            throw  new BeanInstantiationException("BeanFactoryPostProcessing failed", e);
+            throw new BeanInstantiationException("BeanFactoryPostProcessing failed", e);
         }
 
     }
 
     private void createBeansFromBeanDefinitions(List<BeanDefinition> beanDefinitions, Map<BeanDefinition, Bean> beanDefinitionBeanMap) {
 
-        for (BeanDefinition beanDefinition : beanDefinitions) {
-            Bean bean = new Bean();
+        Iterator beanDefinitionIterator = beanDefinitions.iterator();
+        while (beanDefinitionIterator.hasNext()) {
+            BeanDefinition beanDefinition = (BeanDefinition) beanDefinitionIterator.next();
             String className = beanDefinition.getBeanClassName();
             try {
-                Object newObject = Class.forName(className).newInstance();
-                bean.setValue(newObject);
-                bean.setId(beanDefinition.getId());
+                Class<?> clazz = Class.forName(className);
+                if (beanDefinition.getId() != null && !BeanPostProcessor.class.isAssignableFrom(clazz)) {
+                    Object newObject = clazz.newInstance();
+
+                    Bean bean = new Bean();
+                    bean.setValue(newObject);
+                    bean.setId(beanDefinition.getId());
+
+                    beans.add(bean);
+                    beanDefinitionBeanMap.put(beanDefinition, bean);
+                } else {
+                    beanDefinitionIterator.remove();
+                }
             } catch (InstantiationException | ClassNotFoundException | IllegalAccessException e) {
                 LOG.error("Cannot create such class: {}", className, e);
                 throw new BeanInstantiationException("Cannot create such class: " + className + "\n", e);
             }
-            beans.add(bean);
-            beanDefinitionBeanMap.put(beanDefinition, bean);
         }
     }
 
@@ -160,7 +175,7 @@ public class ClassPathApplicationContext implements ApplicationContext {
 
         } catch (Exception e) {
             LOG.error("BeanFactoryPostProcessing failed", e);
-            throw  new BeanInstantiationException("BeanFactoryPostProcessing failed", e);
+            throw new BeanInstantiationException("BeanFactoryPostProcessing failed", e);
         }
 
     }

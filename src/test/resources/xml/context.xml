@@ -1,5 +1,5 @@
 <beans>
-    <import resource = "src/test/resources/xml/email-context.xml"/>
+    <import resource = "xml/email-context.xml"/>
 
     <bean id="userService" class="com.gordeev.applicationcontextlibrary.fortest.UserService">
         <property name="mailService" ref="mailService"/>
@@ -14,8 +14,8 @@
         <property name="mailService" ref="mailService"/>
     </bean>
 
-    <bean id="consolLogBeanPostProcessor" class="com.gordeev.applicationcontextlibrary.fortest.ConsolLogBeanPostProcessor">
+    <bean  class="com.gordeev.applicationcontextlibrary.fortest.ConsolLogBeanPostProcessor">
     </bean>
-    <bean id="consolLogBeanFactoryPostProcessor" class="com.gordeev.applicationcontextlibrary.fortest.ConsolLogBeanFactoryPostProcessor">
+    <bean  class="com.gordeev.applicationcontextlibrary.fortest.ConsolLogBeanFactoryPostProcessor">
     </bean>
 </beans>

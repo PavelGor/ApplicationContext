@@ -36,7 +36,7 @@ public class XmlBeanDefinitionReader implements BeanDefinitionReader {
                 SAXParser saxParser = saxParserFactory.newSAXParser();
                 XmlParserHandler xmlParserHandler = new XmlParserHandler();
 
-                saxParser.parse(pathToFile, xmlParserHandler);
+                saxParser.parse(getClass().getClassLoader().getResourceAsStream(pathToFile), xmlParserHandler); //TODO: maybe need to use InputStream
 
                 beanDefinitions.addAll(xmlParserHandler.getBeanDefinitions());
 

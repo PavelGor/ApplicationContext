@@ -6,7 +6,7 @@ import com.gordeev.applicationcontextlibrary.fortest.UserService
 import spock.lang.Specification
 
 class ClassPathApplicationContextITest extends Specification {
-    String[] paths = ["src/test/resources/xml/context.xml"]
+    String[] paths = ["xml/context.xml"]
     ApplicationContext applicationContext = new ClassPathApplicationContext(paths)
 
     void testGetBean() {
@@ -31,7 +31,7 @@ class ClassPathApplicationContextITest extends Specification {
         def classNameList = applicationContext.getBeanNames()
 
         expect:"equals"
-        classNameList == ['userService', 'paymentWithMaxService', 'paymentService', 'consolLogBeanPostProcessor', 'consolLogBeanFactoryPostProcessor', 'mailService']
+        classNameList == ['userService', 'paymentWithMaxService', 'paymentService', 'mailService']
     }
 
 }

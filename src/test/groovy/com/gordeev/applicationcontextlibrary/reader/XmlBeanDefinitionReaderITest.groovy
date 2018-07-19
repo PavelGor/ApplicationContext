@@ -6,7 +6,7 @@ import spock.lang.Specification
 class XmlBeanDefinitionReaderITest extends Specification {
 
     void testReadBeanDefinitions() {
-        String[] paths = ["src/test/resources/xml/context.xml"]
+        String[] paths = ["xml/context.xml"]
         XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(paths)
 
         given: "given"
@@ -20,8 +20,7 @@ class XmlBeanDefinitionReaderITest extends Specification {
 
         actualBeanDefinitions.get(1).id == "paymentWithMaxService"
         actualBeanDefinitions.get(2).id == "paymentService"
-        actualBeanDefinitions.get(3).id == "consolLogBeanPostProcessor"
-
+        actualBeanDefinitions.get(3).id == null
     }
 
 }
